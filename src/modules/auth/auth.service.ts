@@ -1,51 +1,58 @@
 import { prisma } from '@/lib/prisma'
 import jwt from 'jsonwebtoken'
+import bcrypt from 'bcryptjs'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-default-key-changeme'
 
 export class AuthService {
   /**
-   * Mock OTP Send
-   * In a real implementation this would call an SMS/Email aggregator
+   * Register a new user with email and password
    */
-  static async sendOtp(identifier: string, name?: string, accountType?: string): Promise<string> {
-    // For mock, we always generate '123456', but we simulate DB logic.
-    let user = await prisma.user.findFirst({
-      where: {
-        OR: [{ email: identifier }, { phone: identifier }],
+  static async register(email: string, firstName: string, lastName: string, password: string, accountType: string) {
+    // Check if user already exists
+    const existingUser = await prisma.user.findFirst({
+      where: { email },
+    })
+
+    if (existingUser) {
+      throw new Error('User with this email already exists')
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10)
+
+    const user = await prisma.user.create({
+      data: {
+        email,
+        name: `${firstName} ${lastName}`.trim(),
+        passwordHash,
+        accountType
       },
     })
-    
-    // Create transient user if they don't exist yet
-    if (!user) {
-      const isEmail = identifier.includes('@')
-      user = await prisma.user.create({
-        data: {
-          email: isEmail ? identifier : null,
-          phone: !isEmail ? identifier : null,
-          name: name || null,
-          accountType: accountType || null
-        },
-      })
-    }
-    
-    // Simulate sending OTP
-    const mockOtp = '123456'
-    console.log(`[AUTH MOCK] OTP for ${identifier} is ${mockOtp}`)
-    
-    return mockOtp
+
+    // Sign JWT
+    return jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, {
+      expiresIn: '7d',
+    })
   }
 
-  static async verifyOtp(identifier: string, code: string): Promise<string | null> {
-    if (code !== '123456') return null // Only accept the mock code
-
+  /**
+   * Login with email and password
+   */
+  static async login(email: string, password: string): Promise<string | null> {
     const user = await prisma.user.findFirst({
-      where: {
-        OR: [{ email: identifier }, { phone: identifier }],
-      },
+      where: { email },
     })
 
-    if (!user) return null
+    if (!user || !user.passwordHash) {
+      return null // either user doesn't exist or registered via old OTP method without a password
+    }
+
+    // Compare passwords
+    const isValid = await bcrypt.compare(password, user.passwordHash)
+    
+    if (!isValid) {
+      return null
+    }
 
     // Sign JWT
     return jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, {
