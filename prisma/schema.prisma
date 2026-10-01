@@ -1,0 +1,248 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String?   @unique
+  phone         String?   @unique
+  name          String?
+  accountType   String?   //e.g., Student, Professional
+  passwordHash  String?
+  role          String    @default("USER") // USER, ADMIN
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  reports       Report[]
+  payments      Payment[]
+}
+
+model ReportType {
+  id          String   @id @default(cuid())
+  key         String   @unique // e.g. "final_year_project", "field_report"
+  name        String
+  description String
+  basePrice   Float    @default(30000.0) // TZS 30,000
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  reports     Report[]
+}
+
+model Template {
+  id             String   @id @default(cuid())
+  reportTypeKey  String
+  institutionId  String?  // Links specifically to an institution
+  version        Int
+  schemaJson     String   // JSON string containing sections & questions
+  createdAt      DateTime @default(now())
+
+  institution    Institution? @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@unique([reportTypeKey, institutionId, version])
+}
+
+model Institution {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  code      String   @unique // e.g. UDSM, SUA, IFM, OUT
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  profiles  InstitutionProfile[]
+  templates Template[]
+}
+
+model InstitutionProfile {
+  id               String   @id @default(cuid())
+  institutionId    String
+  faculty          String?
+  version          String
+  formattingJson   String   // JSON string (fonts, line spacing, margins, chapter order)
+  referencingStyle String   @default("apa7")
+  sourceNote       String?
+  createdAt        DateTime @default(now())
+
+  institution      Institution @relation(fields: [institutionId], references: [id])
+  reports          Report[]
+
+  @@unique([institutionId, faculty, version])
+}
+
+model Report {
+  id                   String   @id @default(cuid())
+  userId               String
+  reportTypeId         String
+  templateVersion      Int      @default(1)
+  institutionProfileId String?
+  title                String
+  coverDataJson        String?  // JSON string for title, authors, department, supervisor, logo
+  language             String   @default("en") // en or sw
+  status               String   @default("DRAFT") // DRAFT, IN_REVIEW, READY_TO_PREVIEW, PAID
+  progress             Int      @default(0) // 0 - 100%
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  user                 User                @relation(fields: [userId], references: [id])
+  reportType           ReportType          @relation(fields: [reportTypeId], references: [id])
+  institutionProfile   InstitutionProfile? @relation(fields: [institutionProfileId], references: [id])
+  
+  sections             ReportSection[]
+  fieldEntries         FieldEntry[]
+  reviewLinks          ReviewLink[]
+  payments             Payment[]
+  exports              Export[]
+  defensePacks         DefensePack[]
+  datasets             Dataset[]
+  assets               Asset[]
+}
+
+model ReportSection {
+  id         String   @id @default(cuid())
+  reportId   String
+  sectionKey String
+  content    String   // Rich Text Draft
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  report     Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  comments   Comment[]
+  
+  @@unique([reportId, sectionKey])
+}
+
+model FieldEntry {
+  id        String   @id @default(cuid())
+  reportId  String
+  timestamp DateTime @default(now())
+  text      String?  
+  audioUrl  String?
+  photoUrl  String?
+  caption   String?
+  tags      String?  // Comma separated or JSON string
+  createdAt DateTime @default(now())
+
+  report    Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+}
+
+model Asset {
+  id        String   @id @default(cuid())
+  reportId  String
+  type      String   // IMAGE, AUDIO, ATTACHMENT
+  url       String
+  createdAt DateTime @default(now())
+  
+  report    Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+}
+
+model Dataset {
+  id        String   @id @default(cuid())
+  reportId  String
+  fileUrl   String
+  summaryJson String?  // Extracted columns, rows preview (JSON String)
+  createdAt DateTime @default(now())
+
+  report    Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  analysisBlocks AnalysisBlock[]
+}
+
+model AnalysisBlock {
+  id        String   @id @default(cuid())
+  datasetId String
+  resultJson String    // Tables, numbers, averages, percentages (JSON String)
+  draftText  String? // AI interpreted wording
+  createdAt DateTime @default(now())
+
+  dataset   Dataset  @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+}
+
+model ReviewLink {
+  id        String   @id @default(cuid())
+  reportId  String
+  token     String   @unique
+  scope     String   @default("full") // full, comments_only
+  expiresAt DateTime?
+  revoked   Boolean  @default(false)
+  status    String   @default("ACTIVE") // ACTIVE, COMPLETED, REVOKED
+  createdAt DateTime @default(now())
+
+  report    Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+}
+
+model Comment {
+  id               String   @id @default(cuid())
+  reportSectionId  String
+  reviewerName     String?
+  text             String
+  resolved         Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  reportSection    ReportSection @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
+}
+
+model Rubric {
+  id            String   @id @default(cuid())
+  institutionId String
+  criteriaJson  String   // Guidelines & Checks structured data (JSON String)
+  createdAt     DateTime @default(now())
+}
+
+model RubricCheck {
+  id          String   @id @default(cuid())
+  reportId    String
+  rubricId    String
+  resultJson  String   // Met, Partly Met, Missing & section links (JSON String)
+  createdAt   DateTime @default(now())
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  userId        String
+  reportId      String
+  amount        Float
+  currency      String   @default("TZS")
+  provider      String   // ClickPesa, Selcom, AzamPay, Mock
+  providerRef   String?  @unique
+  status        String   @default("PENDING") // PENDING, SUCCESS, FAILED
+  paidAt        DateTime?
+  metadataJson  String?  // JSON string
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id])
+  report        Report   @relation(fields: [reportId], references: [id])
+}
+
+model Export {
+  id        String   @id @default(cuid())
+  reportId  String
+  format    String   // DOCX, PDF
+  fileUrl   String
+  createdAt DateTime @default(now())
+
+  report    Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+}
+
+model DefensePack {
+  id            String   @id @default(cuid())
+  reportId      String
+  slideUrl      String?
+  questionsJson String?  // JSON String
+  createdAt     DateTime @default(now())
+
+  report        Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+}
+
+model DiscountCode {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  discountPct Float    // e.g. 10.0 for 10%
+  expiresAt   DateTime?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
