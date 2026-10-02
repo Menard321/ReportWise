@@ -3,12 +3,18 @@ import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { ReviewShare } from '@/components/ui/ReviewShare'
+import { AINotice } from '@/components/ui/AINotice'
+import { SmartStartForm } from '@/components/SmartStartForm'
 
 export default async function DashboardPage() {
   const session = await getUserSession()
   if (!session) {
     redirect('/login')
   }
+
+  // Fetch report types and universities to seed the Smart Start Form
+  const reportTypes = await prisma.reportType.findMany({ select: { id: true, name: true, key: true } })
+  const universities = await prisma.institution.findMany({ select: { id: true, name: true } })
 
   const reports = await prisma.report.findMany({
     where: { userId: session.userId },
@@ -23,33 +29,37 @@ export default async function DashboardPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <AINotice />
+      
+      <SmartStartForm 
+        reportTypes={reportTypes} 
+        universities={universities} 
+      />
+
+      <div className="flex items-center justify-between mb-6 mt-16 pt-8 border-t border-gray-200">
         <div>
-          <h1 className="text-3xl font-bold text-[#1F3A5F]">My Reports</h1>
-          <p className="mt-1 text-sm text-gray-500">Pick up where you left off or start a new draft.</p>
+          <h2 className="text-2xl font-bold text-[#1F3A5F]">My reports</h2>
+          <p className="mt-1 text-sm text-gray-500">Pick up where you left off or view your generated drafts.</p>
         </div>
-        <Link
-          href="/dashboard/new"
-          className="rounded-md bg-[#0E8A7D] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#0c786c]"
-        >
-          New Report
-        </Link>
+        <div className="flex gap-4">
+          <Link
+            href="/dashboard/import"
+            className="text-sm font-medium text-[#0E8A7D] hover:text-[#0c786c] flex items-center"
+          >
+            Import Draft
+          </Link>
+          <Link
+            href="/dashboard/new"
+            className="text-sm font-medium text-gray-600 hover:text-gray-900 flex items-center border-l pl-4 border-gray-300"
+          >
+            New report (guided)
+          </Link>
+        </div>
       </div>
 
       {reports.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-gray-300 bg-white p-12 text-center">
-          <h3 className="text-lg font-medium text-[#1F3A5F]">No reports yet</h3>
-          <p className="mt-2 text-sm text-gray-500">
-            Get started by creating your first guided report draft.
-          </p>
-          <div className="mt-6">
-            <Link
-              href="/dashboard/new"
-              className="inline-flex rounded-md bg-[#1F3A5F] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1a3152]"
-            >
-              Start Writing
-            </Link>
-          </div>
+        <div className="rounded-lg border border-dashed border-gray-300 bg-white p-10 text-center">
+          <h3 className="text-sm font-medium text-gray-500">No reports yet. Your drafts will appear here.</h3>
         </div>
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -75,7 +85,7 @@ export default async function DashboardPage() {
                   </p>
                 )}
               </div>
-              <div className="bg-gray-50 px-5 py-3 border-t border-gray-100 flex justify-between items-center">
+              <div className="bg-gray-50 px-5 py-3 border-t border-gray-100 flex justify-between flex-wrap gap-2 items-center">
                 <Link
                   href={`/editor/${report.id}`}
                   className="text-sm font-medium text-[#0E8A7D] hover:text-[#0c786c]"

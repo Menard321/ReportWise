@@ -5,28 +5,16 @@ import crypto from 'crypto'
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-default-key-changeme'
 
 async function hashPassword(password: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const salt = crypto.randomBytes(16).toString('hex')
-    crypto.scrypt(password, salt, 64, (err, derivedKey) => {
-      if (err) reject(err)
-      resolve(salt + ':' + derivedKey.toString('hex'))
-    })
-  })
+  const salt = crypto.randomBytes(16).toString('hex')
+  const derivedKey = crypto.scryptSync(password, salt, 64)
+  return salt + ':' + derivedKey.toString('hex')
 }
 
 async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  return new Promise((resolve, reject) => {
-    const [salt, key] = hash.split(':')
-    if (!salt || !key) {
-      // Handle the case where old unhashed passwords somehow end up here
-      resolve(false)
-      return
-    }
-    crypto.scrypt(password, salt, 64, (err, derivedKey) => {
-      if (err) reject(err)
-      resolve(key === derivedKey.toString('hex'))
-    })
-  })
+  const [salt, key] = hash.split(':')
+  if (!salt || !key) return false
+  const derivedKey = crypto.scryptSync(password, salt, 64)
+  return key === derivedKey.toString('hex')
 }
 
 export class AuthService {

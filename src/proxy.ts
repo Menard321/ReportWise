@@ -4,7 +4,7 @@ import * as jose from 'jose'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-default-key-changeme'
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const sessionToken = request.cookies.get('session_token')?.value
   
   const isAuthRoute = request.nextUrl.pathname.startsWith('/login')

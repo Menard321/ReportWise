@@ -8,18 +8,38 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String?   @unique
-  phone         String?   @unique
-  name          String?
-  accountType   String?   //e.g., Student, Professional
-  passwordHash  String?
-  role          String    @default("USER") // USER, ADMIN
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  email           String?   @unique
+  phone           String?   @unique
+  name            String?
+  userType        String?
+  emailVerifiedAt DateTime?
+  accountType     String?   // e.g., Student, Professional
+  passwordHash    String?
+  role            String    @default("USER") // USER, ADMIN
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  reports       Report[]
-  payments      Payment[]
+  reports        Report[]
+  payments       Payment[]
+  otpCodes       OtpCode[]
+  formatUploads  FormatUpload[]
+  universityReqs UniversityRequest[]
+  teamMembers    TeamMember[]
+  institutionAcc InstitutionAccount[]
+  references     Reference[]
+  inputFiles     InputFile[]
+}
+
+model OtpCode {
+  id        String   @id @default(cuid())
+  userId    String
+  code      String   // hashed code
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model ReportType {
@@ -28,6 +48,8 @@ model ReportType {
   name        String
   description String
   basePrice   Float    @default(30000.0) // TZS 30,000
+  minPages    Int      @default(10)
+  maxPages    Int      @default(100)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -48,30 +70,77 @@ model Template {
 }
 
 model Institution {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  code      String   @unique // e.g. UDSM, SUA, IFM, OUT
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  name       String   @unique
+  code       String   @unique // e.g. UDSM, SUA, IFM, OUT
+  tcuListed  Boolean  @default(true)
+  logoFile   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  profiles  InstitutionProfile[]
-  templates Template[]
+  profiles   InstitutionProfile[]
+  templates  Template[]
+  accounts   InstitutionAccount[]
 }
 
 model InstitutionProfile {
   id               String   @id @default(cuid())
   institutionId    String
   faculty          String?
+  department       String?
+  programmeLevel   String?
   version          String
   formattingJson   String   // JSON string (fonts, line spacing, margins, chapter order)
+  coverLayoutJson  String?  
   referencingStyle String   @default("apa7")
+  sourceUrl        String?
   sourceNote       String?
+  verificationStat String   @default("student_reported")
+  verifiedOn       DateTime?
+  contact          String?
   createdAt        DateTime @default(now())
 
   institution      Institution @relation(fields: [institutionId], references: [id])
   reports          Report[]
 
-  @@unique([institutionId, faculty, version])
+  @@unique([institutionId, faculty, department, version])
+}
+
+model FormatUpload {
+  id              String   @id @default(cuid())
+  userId          String
+  kind            String   // cover, sample, guideline
+  fileUrl         String
+  detectedProfile String?  // JSON string
+  confidence      Float?
+  status          String   @default("PENDING")
+  confirmedAt     DateTime?
+  shareConsent    Boolean  @default(false)
+  reviewStatus    String   @default("PENDING")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserFormatProfile {
+  id              String   @id @default(cuid())
+  userId          String
+  name            String
+  formattingJson  String
+  createdAt       DateTime @default(now())
+}
+
+model UniversityRequest {
+  id         String   @id @default(cuid())
+  userId     String
+  name       String
+  city       String?
+  websiteUrl String?
+  status     String   @default("PENDING")
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Report {
@@ -80,9 +149,15 @@ model Report {
   reportTypeId         String
   templateVersion      Int      @default(1)
   institutionProfileId String?
+  
   title                String
   coverDataJson        String?  // JSON string for title, authors, department, supervisor, logo
   language             String   @default("en") // en or sw
+  
+  targetPages          Int?
+  targetIncludesFrontMatter Boolean @default(false)
+  estimatedPages       Int?
+  
   status               String   @default("DRAFT") // DRAFT, IN_REVIEW, READY_TO_PREVIEW, PAID
   progress             Int      @default(0) // 0 - 100%
   createdAt            DateTime @default(now())
@@ -100,6 +175,13 @@ model Report {
   defensePacks         DefensePack[]
   datasets             Dataset[]
   assets               Asset[]
+  
+  versions             ReportVersion[]
+  jobs                 GenerationJob[]
+  candidates           ReferenceCandidate[]
+  teams                Team[]
+  inputs               ReportInput[]
+  draftSources         DraftSource[]
 }
 
 model ReportSection {
@@ -107,13 +189,178 @@ model ReportSection {
   reportId   String
   sectionKey String
   content    String   // Rich Text Draft
+  wordBudget Int?
+  wordCount  Int      @default(0)
+  draftStatus String  @default("PENDING")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  report       Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  comments     Comment[]
+  assignments  SectionAssignment[]
+  
+  @@unique([reportId, sectionKey])
+}
+
+model ReportVersion {
+  id          String   @id @default(cuid())
+  reportId    String
+  contentJson String
+  reason      String
+  createdAt   DateTime @default(now())
+
+  report      Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+}
+
+model GenerationJob {
+  id         String   @id @default(cuid())
+  reportId   String
+  status     String   @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  error      String?
+  tokensUsed Int?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   report     Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  comments   Comment[]
-  
-  @@unique([reportId, sectionKey])
+}
+
+model Reference {
+  id                 String   @id @default(cuid())
+  userId             String
+  doi                String?
+  title              String
+  authors            String
+  year               Int?
+  journal            String?
+  sourceDb           String   // crossref, pubmed, openalex, etc.
+  verificationStatus String   @default("UNVERIFIED")
+  verifiedAt         DateTime?
+  retracted          Boolean  @default(false)
+  formattedText      String?
+  manual             Boolean  @default(false)
+  createdAt          DateTime @default(now())
+
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ReferenceCandidate {
+  id             String   @id @default(cuid())
+  reportId       String
+  claim          String
+  candidatesJson String   // JSON string of candidate objects
+  createdAt      DateTime @default(now())
+
+  report         Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  reportId  String
+  createdAt DateTime @default(now())
+
+  report    Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  members   TeamMember[]
+}
+
+model TeamMember {
+  id          String   @id @default(cuid())
+  teamId      String
+  userId      String
+  role        String   @default("WRITER") // LEADER, WRITER, READER
+  createdAt   DateTime @default(now())
+
+  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignments SectionAssignment[]
+}
+
+model SectionAssignment {
+  id              String   @id @default(cuid())
+  teamMemberId    String
+  reportSectionId String
+  createdAt       DateTime @default(now())
+
+  member          TeamMember    @relation(fields: [teamMemberId], references: [id], onDelete: Cascade)
+  section         ReportSection @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
+}
+
+model InstitutionAccount {
+  id            String   @id @default(cuid())
+  institutionId String
+  userId        String
+  createdAt     DateTime @default(now())
+
+  institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  licenses      License[]
+}
+
+model License {
+  id         String   @id @default(cuid())
+  accountId  String
+  seats      Int
+  usedSeats  Int      @default(0)
+  expiresAt  DateTime
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  account    InstitutionAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+}
+
+model Voucher {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  value     Float
+  maxUses   Int      @default(1)
+  usedCount Int      @default(0)
+  expiresAt DateTime?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model Reminder {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  sendAt    DateTime
+  sent      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model ReportInput {
+  id                String   @id @default(cuid())
+  reportId          String
+  instructionText   String?
+  understandingJson String?
+  status            String   @default("PENDING")
+  createdAt         DateTime @default(now())
+
+  report            Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+}
+
+model InputFile {
+  id            String   @id @default(cuid())
+  userId        String
+  fileUrl       String
+  label         String
+  autoLabel     String?
+  parsedSummary String?
+  usedFor       String?
+  readStatus    String   @default("PENDING")
+  createdAt     DateTime @default(now())
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model DraftSource {
+  id                  String   @id @default(cuid())
+  reportId            String
+  sectionId           String
+  paragraphRef        String
+  inputReferencesJson String
+  createdAt           DateTime @default(now())
+
+  report              Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
 }
 
 model FieldEntry {
@@ -141,24 +388,24 @@ model Asset {
 }
 
 model Dataset {
-  id        String   @id @default(cuid())
-  reportId  String
-  fileUrl   String
+  id          String   @id @default(cuid())
+  reportId    String
+  fileUrl     String
   summaryJson String?  // Extracted columns, rows preview (JSON String)
-  createdAt DateTime @default(now())
+  createdAt   DateTime @default(now())
 
-  report    Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  report         Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
   analysisBlocks AnalysisBlock[]
 }
 
 model AnalysisBlock {
-  id        String   @id @default(cuid())
-  datasetId String
+  id         String   @id @default(cuid())
+  datasetId  String
   resultJson String    // Tables, numbers, averages, percentages (JSON String)
-  draftText  String? // AI interpreted wording
-  createdAt DateTime @default(now())
+  draftText  String?   // AI interpreted wording
+  createdAt  DateTime @default(now())
 
-  dataset   Dataset  @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+  dataset    Dataset  @relation(fields: [datasetId], references: [id], onDelete: Cascade)
 }
 
 model ReviewLink {
