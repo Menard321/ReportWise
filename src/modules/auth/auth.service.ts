@@ -1,8 +1,33 @@
 import { prisma } from '@/lib/prisma'
 import jwt from 'jsonwebtoken'
-import bcrypt from 'bcryptjs'
+import crypto from 'crypto'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-default-key-changeme'
+
+async function hashPassword(password: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const salt = crypto.randomBytes(16).toString('hex')
+    crypto.scrypt(password, salt, 64, (err, derivedKey) => {
+      if (err) reject(err)
+      resolve(salt + ':' + derivedKey.toString('hex'))
+    })
+  })
+}
+
+async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  return new Promise((resolve, reject) => {
+    const [salt, key] = hash.split(':')
+    if (!salt || !key) {
+      // Handle the case where old unhashed passwords somehow end up here
+      resolve(false)
+      return
+    }
+    crypto.scrypt(password, salt, 64, (err, derivedKey) => {
+      if (err) reject(err)
+      resolve(key === derivedKey.toString('hex'))
+    })
+  })
+}
 
 export class AuthService {
   /**
@@ -18,7 +43,7 @@ export class AuthService {
       throw new Error('User with this email already exists')
     }
 
-    const passwordHash = await bcrypt.hash(password, 10)
+    const passwordHash = await hashPassword(password)
 
     const user = await prisma.user.create({
       data: {
@@ -48,7 +73,7 @@ export class AuthService {
     }
 
     // Compare passwords
-    const isValid = await bcrypt.compare(password, user.passwordHash)
+    const isValid = await verifyPassword(password, user.passwordHash)
     
     if (!isValid) {
       return null
@@ -68,3 +93,4 @@ export class AuthService {
     }
   }
 }
+

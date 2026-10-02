@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { AuthService } from '@/modules/auth/auth.service'
+import fs from 'fs'
 
 export async function POST(req: Request) {
   try {
@@ -22,6 +23,8 @@ export async function POST(req: Request) {
     
     return NextResponse.json({ success: true, message: 'Account created successfully' })
   } catch (error: any) {
+    try { fs.writeFileSync('d:/ReportWise/backend-error.txt', error.stack || String(error)) } catch(e){}
     return NextResponse.json({ error: error.message || 'Failed to create account' }, { status: 500 })
   }
 }
+
