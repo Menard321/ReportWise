@@ -87,7 +87,7 @@ export default async function DashboardPage() {
               </div>
               <div className="bg-gray-50 px-5 py-3 border-t border-gray-100 flex justify-between flex-wrap gap-2 items-center">
                 <Link
-                  href={`/editor/${report.id}`}
+                  href={`/editor/${report.id}/wizard`}
                   className="text-sm font-medium text-[#0E8A7D] hover:text-[#0c786c]"
                 >
                   Continue

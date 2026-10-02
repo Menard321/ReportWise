@@ -28,7 +28,7 @@ export default async function WizardPage({
   if (report.institutionProfile?.institutionId) {
      template = await prisma.template.findFirst({
         where: { 
-          reportTypeKey: report.reportTypeId, 
+          reportTypeKey: report.reportType.key, 
           institutionId: report.institutionProfile.institutionId,
           version: report.templateVersion 
         } as any
@@ -37,7 +37,7 @@ export default async function WizardPage({
   
   if (!template) {
      template = await prisma.template.findFirst({
-        where: { reportTypeKey: report.reportTypeId, version: report.templateVersion } as any
+        where: { reportTypeKey: report.reportType.key, version: report.templateVersion } as any
      })
   }
 

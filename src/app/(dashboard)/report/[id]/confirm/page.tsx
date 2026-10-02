@@ -115,7 +115,7 @@ export default async function ConfirmUnderstandingPage({
 
       <div className="flex justify-end pt-4">
         <Link 
-          href={`/report/${id}/details`}
+          href={`/report/${id}/generate`}
           className="inline-flex items-center justify-center rounded-xl bg-[#0E8A7D] px-10 py-4 text-base font-bold text-white shadow-lg shadow-[#0E8A7D]/20 hover:bg-[#0c786c] transition-all hover:-translate-y-0.5 min-w-[240px]"
         >
           Looks right, continue

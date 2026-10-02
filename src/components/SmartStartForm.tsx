@@ -150,7 +150,7 @@ export function SmartStartForm({ reportTypes, universities }: { reportTypes: any
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         
         {/* Card 1: Upload Documents - Premium Glass Effect */}
-        <div className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 overflow-hidden flex flex-col transition-all">
+        <div className="bg-white rounded-[2rem] shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden flex flex-col transition-all hover:shadow-2xl hover:shadow-gray-200/60 duration-300">
           <div className="p-8 flex-1 flex flex-col">
             <h3 className="text-xl font-bold text-[#1F3A5F] mb-6 flex items-center gap-2">
               <UploadCloud className="h-6 w-6 text-[#0E8A7D]" />
@@ -214,7 +214,7 @@ export function SmartStartForm({ reportTypes, universities }: { reportTypes: any
         </div>
 
         {/* Card 2: Instructions - Premium */}
-        <div className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 overflow-hidden flex flex-col">
+        <div className="bg-white rounded-[2rem] shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden flex flex-col transition-all hover:shadow-2xl hover:shadow-gray-200/60 duration-300">
           <div className="p-8 flex-1 flex flex-col space-y-6">
             <h3 className="text-xl font-bold text-[#1F3A5F] mb-2 flex items-center gap-2">
               <BookOpen className="h-6 w-6 text-[#1F3A5F]" />
@@ -229,7 +229,7 @@ export function SmartStartForm({ reportTypes, universities }: { reportTypes: any
               {!hasFiles && <span className="text-xs text-gray-500 mb-2 block">No documents? Just enter your title and we'll ask what we need.</span>}
               <input
                 type="text"
-                className="w-full bg-slate-50 border-0 ring-1 ring-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-[#0E8A7D] sm:text-sm p-3 font-medium transition-all"
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl shadow-sm focus:bg-white focus:ring-2 focus:ring-[#0E8A7D] outline-none hover:bg-gray-100/50 sm:text-sm p-3 font-medium transition-all"
                 placeholder="E.g. Analysis of VAT returns at Example Consultancy Ltd..."
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -239,7 +239,7 @@ export function SmartStartForm({ reportTypes, universities }: { reportTypes: any
             <div>
               <label className="block text-sm font-semibold text-gray-800 mb-1">Instructions (Optional)</label>
               <textarea
-                className="w-full bg-slate-50 border-0 ring-1 ring-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-[#0E8A7D] sm:text-sm p-3 block transition-all"
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl shadow-sm focus:bg-white focus:ring-2 focus:ring-[#0E8A7D] outline-none hover:bg-gray-100/50 sm:text-sm p-3 block transition-all"
                 rows={3}
                 placeholder="E.g., I need a field attachment report for my 8 weeks at the tax authority. Use my dataset to write the findings..."
                 value={instructions}
@@ -253,7 +253,7 @@ export function SmartStartForm({ reportTypes, universities }: { reportTypes: any
                   Report Type <span className="text-orange-500">*</span>
                 </label>
                 <select
-                  className="w-full bg-slate-50 border-0 ring-1 ring-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-[#0E8A7D] sm:text-sm p-3 block font-medium"
+                  className="w-full bg-gray-50 border border-gray-100 rounded-xl shadow-sm focus:bg-white focus:ring-2 focus:ring-[#0E8A7D] outline-none hover:bg-gray-100/50 sm:text-sm p-3 block font-medium"
                   value={selectedType}
                   onChange={(e) => setSelectedType(e.target.value)}
                 >
@@ -268,7 +268,7 @@ export function SmartStartForm({ reportTypes, universities }: { reportTypes: any
                  <label className="block text-sm font-semibold text-gray-800 mb-1">Page Goal</label>
                  <input
                    type="number"
-                   className="w-full bg-slate-50 border-0 ring-1 ring-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-[#0E8A7D] sm:text-sm p-3"
+                   className="w-full bg-gray-50 border border-gray-100 rounded-xl shadow-sm focus:bg-white focus:ring-2 focus:ring-[#0E8A7D] outline-none hover:bg-gray-100/50 sm:text-sm p-3"
                    value={pageTarget}
                    onChange={(e) => setPageTarget(parseInt(e.target.value) || 0)}
                  />
@@ -278,7 +278,7 @@ export function SmartStartForm({ reportTypes, universities }: { reportTypes: any
                    University {needsUniversity && <span className="text-orange-500">*</span>}
                  </label>
                  <select
-                   className="w-full bg-slate-50 border-0 ring-1 ring-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-[#0E8A7D] sm:text-sm p-3 font-medium"
+                   className="w-full bg-gray-50 border border-gray-100 rounded-xl shadow-sm focus:bg-white focus:ring-2 focus:ring-[#0E8A7D] outline-none hover:bg-gray-100/50 sm:text-sm p-3 font-medium"
                    value={selectedUniversity}
                    onChange={(e) => setSelectedUniversity(e.target.value)}
                  >
@@ -292,7 +292,7 @@ export function SmartStartForm({ reportTypes, universities }: { reportTypes: any
                  {selectedUniversity === 'missing' && (
                    <input 
                      type="text" 
-                     className="mt-3 w-full animate-in fade-in slide-in-from-top-2 bg-slate-50 border-0 ring-1 ring-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-[#0E8A7D] sm:text-sm p-3"
+                     className="mt-3 w-full animate-in fade-in slide-in-from-top-2 bg-gray-50 border border-gray-100 rounded-xl shadow-sm focus:bg-white focus:ring-2 focus:ring-[#0E8A7D] outline-none hover:bg-gray-100/50 sm:text-sm p-3"
                      placeholder="Write your university's name"
                      value={customUniversity}
                      onChange={(e) => setCustomUniversity(e.target.value)}
@@ -305,7 +305,7 @@ export function SmartStartForm({ reportTypes, universities }: { reportTypes: any
 
       </div>
 
-      <div className="mt-10 flex flex-col sm:flex-row items-center justify-between bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+      <div className="mt-10 flex flex-col sm:flex-row items-center justify-between bg-white/70 backdrop-blur-xl rounded-[1.5rem] p-6 shadow-2xl shadow-gray-200/50 border border-white/80 sticky bottom-6 z-10 hover:bg-white/95 transition-all duration-300 ring-1 ring-gray-100/50">
         
         {/* V3.3 Readiness Indicator */}
         <div className="flex-1 w-full sm:w-auto mb-6 sm:mb-0 max-w-sm">
